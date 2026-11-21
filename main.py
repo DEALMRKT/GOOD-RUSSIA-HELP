@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 from aiogram import Bot, Dispatcher, F
+from fastapi import FastAPI
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -289,10 +290,27 @@ async def decide_application(callback: CallbackQuery):
     await callback.message.answer(f"{admin_label} заявка №{app_id}. {delivery}")
     await callback.answer("Готово")
 
-async def main():
+app = FastAPI(title="GOOD RUSSIA HELP")
+
+_polling_task = None
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "bot": "GOOD RUSSIA HELP"}
+
+@app.on_event("startup")
+async def startup():
+    global _polling_task
     init_db()
     logger.info("Starting GOOD RUSSIA HELP bot; admin=%s", ADMIN_ID)
-    await dp.start_polling(bot)
+    _polling_task = asyncio.create_task(dp.start_polling(bot))
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.on_event("shutdown")
+async def shutdown():
+    if _polling_task:
+        _polling_task.cancel()
+        try:
+            await _polling_task
+        except asyncio.CancelledError:
+            pass
+    await bot.session.close()
