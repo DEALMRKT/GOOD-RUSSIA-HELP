@@ -1,0 +1,12 @@
+services:
+  - type: worker
+    name: good-russia-help-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        value: "520362766"
